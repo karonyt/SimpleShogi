@@ -1,0 +1,708 @@
+<html>
+
+<head>
+  <title>将棋</title>
+</head>
+
+<body>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    #app {
+      padding: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem
+    }
+
+    h2.sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0)
+    }
+
+    .top-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    .status-bar {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      background: var(--color-background-secondary);
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: var(--border-radius-md);
+      padding: 8px 20px;
+      min-width: 300px;
+      text-align: center
+    }
+
+    .status-bar span {
+      font-weight: 500;
+      color: var(--color-text-primary)
+    }
+
+    .ai-badge {
+      font-size: 11px;
+      background: var(--color-background-info);
+      color: var(--color-text-info);
+      border-radius: var(--border-radius-md);
+      padding: 3px 10px;
+      font-weight: 500
+    }
+
+    .thinking {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+      font-style: italic
+    }
+
+    .game-area {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start
+    }
+
+    .hand-box {
+      width: 110px;
+      background: var(--color-background-secondary);
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: var(--border-radius-lg);
+      padding: 8px;
+      min-height: 200px
+    }
+
+    .hand-box h3 {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      font-weight: 500;
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em
+    }
+
+    .hand-pieces {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center
+    }
+
+    .hand-piece {
+      width: 32px;
+      height: 36px;
+      background: #f5e9c8;
+      border: 1px solid #c9a84c;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s
+    }
+
+    .hand-piece:hover {
+      transform: scale(1.1)
+    }
+
+    .hand-piece.selected {
+      outline: 2px solid #c0392b;
+      background: #ffe0d0
+    }
+
+    .hand-piece.enemy {
+      background: #c8d5f5;
+      border-color: #4c6cc9;
+      transform: rotate(180deg);
+      cursor: default
+    }
+
+    .hand-piece .count {
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 9px;
+      color: #888;
+      font-weight: 500
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(9, 52px);
+      grid-template-rows: repeat(9, 52px);
+      border: 2px solid #6b4c11;
+      background: #dcb65a;
+      gap: 1px;
+      padding: 1px
+    }
+
+    .cell {
+      width: 52px;
+      height: 52px;
+      background: #f0d080;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.1s
+    }
+
+    .cell:hover {
+      background: #f5e4a0
+    }
+
+    .cell.selected {
+      background: #b8f0b8 !important
+    }
+
+    .cell.movable {
+      background: #d0f0d0 !important
+    }
+
+    .cell.movable::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(0, 160, 0, 0.3);
+      border: 2px solid rgba(0, 160, 0, 0.5)
+    }
+
+    .cell.last-move {
+      background: #ffe8a0 !important
+    }
+
+    .piece {
+      width: 44px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px 4px 8px 8px;
+      font-size: 15px;
+      font-weight: 500;
+      position: relative;
+      cursor: pointer;
+      border: 1px solid #c9a84c;
+      background: #f5e9c8;
+      box-shadow: 1px 1px 0 #c9a84c;
+      transition: transform 0.1s
+    }
+
+    .piece.enemy {
+      transform: rotate(180deg);
+      background: #c8d5f5;
+      border-color: #4c6cc9;
+      box-shadow: 1px 1px 0 #4c6cc9;
+      color: #1a3a8a
+    }
+
+    .piece.mine {
+      color: #3a1a0a
+    }
+
+    .piece.promoted {
+      color: #c0392b
+    }
+
+    .piece.enemy.promoted {
+      color: #8b0000
+    }
+
+    .coord-col {
+      display: flex;
+      justify-content: space-around;
+      width: 468px;
+      margin-bottom: 2px
+    }
+
+    .coord-col span,
+    .coord-row span {
+      font-size: 10px;
+      color: var(--color-text-tertiary)
+    }
+
+    .coord-row {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      height: 468px;
+      margin-left: 4px
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    button {
+      padding: 6px 16px;
+      font-size: 13px;
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-md);
+      background: var(--color-background-primary);
+      color: var(--color-text-primary);
+      cursor: pointer
+    }
+
+    button:hover {
+      background: var(--color-background-secondary)
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default
+    }
+
+    select {
+      padding: 6px 12px;
+      font-size: 13px;
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-md);
+      background: var(--color-background-primary);
+      color: var(--color-text-primary)
+    }
+
+    .modal-wrap {
+      min-height: 120px;
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--border-radius-lg);
+      margin: 0.5rem 0;
+      width: 100%
+    }
+
+    .promote-modal {
+      background: var(--color-background-primary);
+      border: 1px solid var(--color-border-primary);
+      border-radius: var(--border-radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+      min-width: 200px
+    }
+
+    .promote-modal h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 1rem
+    }
+
+    .promote-modal .btn-row {
+      justify-content: center
+    }
+  </style>
+
+  <div id="app">
+    <h2 class="sr-only">将棋ゲーム（AIモード付き）— 先手・後手またはAI対戦が選べます</h2>
+    <div class="top-bar">
+      <select id="mode-select" onchange="changeMode()">
+        <option value="pvp">二人対戦</option>
+        <option value="pve" selected>対AI（先手）</option>
+        <option value="evp">対AI（後手）</option>
+      </select>
+      <select id="level-select">
+        <option value="1">AI: 弱い</option>
+        <option value="2" selected>AI: 普通</option>
+        <option value="3">AI: 強い</option>
+      </select>
+      <button onclick="resetGame()">最初から</button>
+      <button onclick="undoMove()" id="undo-btn">一手戻す</button>
+    </div>
+    <div class="status-bar" id="status">先手の番 — 駒をクリックして移動先を選んでください</div>
+    <div id="modal-area"></div>
+    <div class="game-area">
+      <div class="hand-box">
+        <h3>後手の持ち駒</h3>
+        <div class="hand-pieces" id="enemy-hand"></div>
+      </div>
+      <div>
+        <div class="coord-col" id="col-labels"></div>
+        <div style="display:flex">
+          <div class="board" id="board"></div>
+          <div class="coord-row" id="row-labels"></div>
+        </div>
+      </div>
+      <div class="hand-box">
+        <h3>先手の持ち駒</h3>
+        <div class="hand-pieces" id="my-hand"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PIECE_VAL = { '歩': 100, '香': 300, '桂': 350, '銀': 450, '金': 500, '角': 700, '飛': 800, 'と': 400, '成香': 400, '成桂': 430, '成銀': 470, '馬': 850, '竜': 950, '王': 99999, '玉': 99999 };
+    const PROMOTED_MAP = { '飛': '竜', '角': '馬', '銀': '成銀', '桂': '成桂', '香': '成香', '歩': 'と' };
+    const UNPROMOTABLE = new Set(['王', '玉', '金', '竜', '馬', 'と', '成銀', '成桂', '成香']);
+    const PROMOTABLE = new Set(['飛', '角', '銀', '桂', '香', '歩']);
+    const HAND_MAP = { '飛': '飛', '角': '角', '銀': '銀', '桂': '桂', '香': '香', '歩': '歩', '竜': '飛', '馬': '角', 'と': '歩', '成銀': '銀', '成桂': '桂', '成香': '香' };
+    const MOVES = {
+      '王': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]],
+      '玉': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]],
+      '金': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]],
+      '銀': [[-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]],
+      '桂': [[-2, 1], [-2, -1]],
+      'と': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]],
+      '成香': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]],
+      '成桂': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]],
+      '成銀': [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]],
+    };
+    const SLIDE_MOVES = { '飛': [[1, 0], [-1, 0], [0, 1], [0, -1]], '角': [[1, 1], [1, -1], [-1, 1], [-1, -1]], '香': [[-1, 0]], '歩': [[-1, 0]] };
+    const DRAGON_BONUS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    const HORSE_SLIDE = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    const HORSE_BONUS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+    let board, myHand, enemyHand, turn, selected, selectedHandPiece, movableCells, history, gameOver, aiThinking, lastMove;
+    let mode = 'pve';
+
+    function initBoard() {
+      board = Array.from({ length: 9 }, () => Array(9).fill(null));
+      const back = ['香', '桂', '銀', '金', '王', '金', '銀', '桂', '香'];
+      for (let c = 0; c < 9; c++) { board[0][c] = { piece: back[c], owner: 1 }; board[8][c] = { piece: back[8 - c], owner: 0 }; }
+      board[1][1] = { piece: '飛', owner: 1 }; board[1][7] = { piece: '角', owner: 1 };
+      board[7][1] = { piece: '角', owner: 0 }; board[7][7] = { piece: '飛', owner: 0 };
+      for (let c = 0; c < 9; c++) { board[2][c] = { piece: '歩', owner: 1 }; board[6][c] = { piece: '歩', owner: 0 }; }
+      myHand = {}; enemyHand = {}; turn = 0; selected = null; selectedHandPiece = null;
+      movableCells = []; gameOver = false; aiThinking = false; history = []; lastMove = null;
+    }
+
+    function getMovable(r, c, owner, piece) {
+      const dir = owner === 0 ? 1 : -1;
+      let cells = [];
+      if (piece === '竜') {
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          let nr = r + dr, nc = c + dc;
+          while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) {
+            const t = board[nr][nc];
+            if (!t) { cells.push([nr, nc]); } else { if (t.owner !== owner) cells.push([nr, nc]); break; }
+            nr += dr; nc += dc;
+          }
+        }
+        for (const [dr, dc] of DRAGON_BONUS) { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = board[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+        return cells;
+      }
+      if (piece === '馬') {
+        for (const [dr, dc] of HORSE_SLIDE) { let nr = r + dr * dir, nc = c + dc; while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = board[nr][nc]; if (!t) { cells.push([nr, nc]); } else { if (t.owner !== owner) cells.push([nr, nc]); break; } nr += dr * dir; nc += dc; } }
+        for (const [dr, dc] of HORSE_BONUS) { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = board[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+        return cells;
+      }
+      if (piece === '飛' || piece === '角' || piece === '香') {
+        const sm = SLIDE_MOVES[piece];
+        for (const [dr, dc] of sm) { let nr = r + dr * dir, nc = c + dc; while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = board[nr][nc]; if (!t) { cells.push([nr, nc]); } else { if (t.owner !== owner) cells.push([nr, nc]); break; } nr += dr * dir; nc += dc; } }
+        return cells;
+      }
+      if (piece === '歩') { const nr = r - dir, nc = c; if (nr >= 0 && nr < 9) { const t = board[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } return cells; }
+      const ms = MOVES[piece] || [];
+      for (const [dr, dc] of ms) { const nr = r + dr * dir, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = board[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+      return cells;
+    }
+
+    function getDroppable(piece, owner) {
+      let cells = [];
+      for (let r = 0; r < 9; r++)for (let c = 0; c < 9; c++) {
+        if (board[r][c]) continue;
+        if (piece === '歩') {
+          if (owner === 0 && r === 0) continue; if (owner === 1 && r === 8) continue;
+          let has = false; for (let rr = 0; rr < 9; rr++)if (board[rr][c] && board[rr][c].piece === '歩' && board[rr][c].owner === owner) { has = true; break; }
+          if (has) continue;
+        }
+        if (piece === '桂') { if (owner === 0 && r <= 1) continue; if (owner === 1 && r >= 7) continue; }
+        if (piece === '香') { if (owner === 0 && r === 0) continue; if (owner === 1 && r === 8) continue; }
+        cells.push([r, c]);
+      }
+      return cells;
+    }
+
+    function canPromote(r, owner, piece) { if (UNPROMOTABLE.has(piece)) return false; if (!PROMOTABLE.has(piece)) return false; return owner === 0 ? r <= 2 : r >= 6; }
+    function mustPromote(r, owner, piece) { if (piece === '歩' || piece === '香') { if (owner === 0 && r === 0) return true; if (owner === 1 && r === 8) return true; } if (piece === '桂') { if (owner === 0 && r <= 1) return true; if (owner === 1 && r >= 7) return true; } return false; }
+
+    function applyMove(brd, mH, eH, fr, fc, tr, tc, promote, isHand, handPiece, mover) {
+      const nb = brd.map(r => r.map(c => c ? { ...c } : null));
+      const nMH = { ...mH }, nEH = { ...eH };
+      let captured = null;
+      if (isHand) {
+        const h = mover === 0 ? nMH : nEH;
+        h[handPiece]--; if (h[handPiece] === 0) delete h[handPiece];
+        nb[tr][tc] = { piece: handPiece, owner: mover };
+      } else {
+        const p = nb[fr][fc];
+        const tgt = nb[tr][tc];
+        if (tgt) { captured = tgt.piece; const cap = HAND_MAP[tgt.piece] || tgt.piece; const h = mover === 0 ? nMH : nEH; h[cap] = (h[cap] || 0) + 1; }
+        nb[fr][fc] = null;
+        let fp = p.piece; if (promote && PROMOTED_MAP[p.piece]) fp = PROMOTED_MAP[p.piece];
+        nb[tr][tc] = { piece: fp, owner: p.owner };
+      }
+      return { board: nb, myHand: nMH, enemyHand: nEH, captured };
+    }
+
+    function evaluate(brd, mH, eH) {
+      let score = 0;
+      for (let r = 0; r < 9; r++)for (let c = 0; c < 9; c++) {
+        const p = brd[r][c]; if (!p) continue;
+        const v = PIECE_VAL[p.piece] || 0;
+        const pos = p.owner === 0 ? (8 - r) * 2 : (r) * 2;
+        score += p.owner === 0 ? v + pos : -(v + pos);
+      }
+      for (const [k, v] of Object.entries(mH)) score += (PIECE_VAL[k] || 0) * 0.7 * v;
+      for (const [k, v] of Object.entries(eH)) score -= (PIECE_VAL[k] || 0) * 0.7 * v;
+      return score;
+    }
+
+    function getAllMoves(brd, mH, eH, owner) {
+      const moves = [];
+      for (let r = 0; r < 9; r++)for (let c = 0; c < 9; c++) {
+        const p = brd[r][c]; if (!p || p.owner !== owner) continue;
+        const cells = getMovableOn(brd, r, c, owner, p.piece);
+        for (const [tr, tc] of cells) {
+          const prom = canPromoteOn(tr, owner, p.piece);
+          const must = mustPromote(tr, owner, p.piece);
+          if (prom && !must) moves.push({ fr: r, fc: c, tr, tc, promote: true, isHand: false });
+          moves.push({ fr: r, fc: c, tr, tc, promote: must, isHand: false });
+        }
+      }
+      const hand = owner === 0 ? mH : eH;
+      for (const [piece, cnt] of Object.entries(hand)) {
+        if (cnt <= 0) continue;
+        const drops = getDroppableOn(brd, piece, owner);
+        for (const [tr, tc] of drops) moves.push({ tr, tc, isHand: true, handPiece: piece, promote: false });
+      }
+      return moves;
+    }
+
+    function getMovableOn(brd, r, c, owner, piece) {
+      const dir = owner === 0 ? 1 : -1; let cells = [];
+      if (piece === '竜') {
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { let nr = r + dr, nc = c + dc; while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t) cells.push([nr, nc]); else { if (t.owner !== owner) cells.push([nr, nc]); break; } nr += dr; nc += dc; } }
+        for (const [dr, dc] of DRAGON_BONUS) { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+        return cells;
+      }
+      if (piece === '馬') {
+        for (const [dr, dc] of HORSE_SLIDE) { let nr = r + dr * dir, nc = c + dc; while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t) cells.push([nr, nc]); else { if (t.owner !== owner) cells.push([nr, nc]); break; } nr += dr * dir; nc += dc; } }
+        for (const [dr, dc] of HORSE_BONUS) { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+        return cells;
+      }
+      if (piece === '飛' || piece === '角' || piece === '香') {
+        const sm = SLIDE_MOVES[piece];
+        for (const [dr, dc] of sm) { let nr = r + dr * dir, nc = c + dc; while (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t) cells.push([nr, nc]); else { if (t.owner !== owner) cells.push([nr, nc]); break; } nr += dr * dir; nc += dc; } }
+        return cells;
+      }
+      if (piece === '歩') { const nr = r - dir, nc = c; if (nr >= 0 && nr < 9) { const t = brd[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } return cells; }
+      const ms = MOVES[piece] || [];
+      for (const [dr, dc] of ms) { const nr = r + dr * dir, nc = c + dc; if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) { const t = brd[nr][nc]; if (!t || t.owner !== owner) cells.push([nr, nc]); } }
+      return cells;
+    }
+
+    function canPromoteOn(r, owner, piece) { if (UNPROMOTABLE.has(piece) || !PROMOTABLE.has(piece)) return false; return owner === 0 ? r <= 2 : r >= 6; }
+
+    function getDroppableOn(brd, piece, owner) {
+      let cells = [];
+      for (let r = 0; r < 9; r++)for (let c = 0; c < 9; c++) {
+        if (brd[r][c]) continue;
+        if (piece === '歩') { if (owner === 0 && r === 0) continue; if (owner === 1 && r === 8) continue; let has = false; for (let rr = 0; rr < 9; rr++)if (brd[rr][c] && brd[rr][c].piece === '歩' && brd[rr][c].owner === owner) { has = true; break; } if (has) continue; }
+        if (piece === '桂') { if (owner === 0 && r <= 1) continue; if (owner === 1 && r >= 7) continue; }
+        if (piece === '香') { if (owner === 0 && r === 0) continue; if (owner === 1 && r === 8) continue; }
+        cells.push([r, c]);
+      }
+      return cells;
+    }
+
+    function minimax(brd, mH, eH, depth, alpha, beta, maximizing) {
+      if (depth === 0) return evaluate(brd, mH, eH);
+      const owner = maximizing ? 0 : 1;
+      const moves = getAllMoves(brd, mH, eH, owner);
+      if (moves.length === 0) return maximizing ? -50000 : 50000;
+      if (maximizing) {
+        let best = -Infinity;
+        for (const m of moves) {
+          const { board: nb, myHand: nMH, enemyHand: nEH, captured } = applyMove(brd, mH, eH, m.fr, m.fc, m.tr, m.tc, m.promote, m.isHand, m.handPiece, owner);
+          if (captured === '王' || captured === '玉') return 99999;
+          const v = minimax(nb, nMH, nEH, depth - 1, alpha, beta, false);
+          if (v > best) best = v; if (v > alpha) alpha = v; if (beta <= alpha) break;
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (const m of moves) {
+          const { board: nb, myHand: nMH, enemyHand: nEH, captured } = applyMove(brd, mH, eH, m.fr, m.fc, m.tr, m.tc, m.promote, m.isHand, m.handPiece, owner);
+          if (captured === '王' || captured === '玉') return -99999;
+          const v = minimax(nb, nMH, nEH, depth - 1, alpha, beta, true);
+          if (v < best) best = v; if (v < beta) beta = v; if (beta <= alpha) break;
+        }
+        return best;
+      }
+    }
+
+    function getBestMove(brd, mH, eH, aiOwner, level) {
+      const moves = getAllMoves(brd, mH, eH, aiOwner);
+      if (moves.length === 0) return null;
+      const depth = level === 1 ? 1 : level === 2 ? 2 : 3;
+      const maximizing = aiOwner === 0;
+      let best = null, bestVal = maximizing ? -Infinity : Infinity;
+      const shuffled = moves.sort(() => Math.random() - 0.5);
+      for (const m of shuffled) {
+        const { board: nb, myHand: nMH, enemyHand: nEH, captured } = applyMove(brd, mH, eH, m.fr, m.fc, m.tr, m.tc, m.promote, m.isHand, m.handPiece, aiOwner);
+        let v;
+        if (captured === '王' || captured === '玉') { v = maximizing ? 99999 : -99999; }
+        else { v = minimax(nb, nMH, nEH, depth - 1, -Infinity, Infinity, !maximizing); }
+        if (maximizing ? v > bestVal : v < bestVal) { bestVal = v; best = m; }
+      }
+      return best;
+    }
+
+    function doMove(fr, fc, tr, tc, promote, isHandDrop, handPiece) {
+      const snap = { board: board.map(r => r.map(c => c ? { ...c } : null)), myHand: { ...myHand }, enemyHand: { ...enemyHand }, turn, lastMove };
+      history.push(snap);
+      const { board: nb, myHand: nMH, enemyHand: nEH, captured } = applyMove(board, myHand, enemyHand, fr, fc, tr, tc, promote, isHandDrop, handPiece, turn);
+      board = nb; myHand = nMH; enemyHand = nEH;
+      if (captured === '王' || captured === '玉') gameOver = true;
+      lastMove = { tr, tc };
+      turn = 1 - turn;
+      selected = null; selectedHandPiece = null; movableCells = [];
+    }
+
+    function triggerAI() {
+      if (gameOver || aiThinking) return;
+      const aiOwner = mode === 'pve' ? 1 : 0;
+      if (turn !== aiOwner) return;
+      aiThinking = true;
+      updateStatus();
+      setTimeout(() => {
+        const level = parseInt(document.getElementById('level-select').value);
+        const m = getBestMove(board, myHand, enemyHand, aiOwner, level);
+        if (m) { doMove(m.fr, m.fc, m.tr, m.tc, m.promote, m.isHand, m.handPiece); }
+        aiThinking = false;
+        render();
+      }, 50);
+    }
+
+    function cellClick(r, c) {
+      if (gameOver || aiThinking) return;
+      const aiOwner = mode === 'pve' ? 1 : 0;
+      if (mode !== 'pvp' && turn === aiOwner) return;
+      if (selectedHandPiece !== null) {
+        if (movableCells.some(([mr, mc]) => mr === r && mc === c)) { doMove(null, null, r, c, false, true, selectedHandPiece); render(); setTimeout(triggerAI, 300); return; }
+        selectedHandPiece = null; movableCells = []; render(); return;
+      }
+      if (selected) {
+        const [sr, sc] = selected;
+        if (movableCells.some(([mr, mc]) => mr === r && mc === c)) {
+          const p = board[sr][sc];
+          const inZone = canPromote(r, turn, p.piece) || canPromote(sr, turn, p.piece);
+          const must = mustPromote(r, turn, p.piece);
+          if (inZone && !must && PROMOTABLE.has(p.piece)) { showPromoteModal(sr, sc, r, c); return; }
+          doMove(sr, sc, r, c, must, false, null); render(); setTimeout(triggerAI, 300); return;
+        }
+        selected = null; movableCells = [];
+      }
+      const cell = board[r][c];
+      if (cell && cell.owner === turn) { selected = [r, c]; movableCells = getMovable(r, c, cell.owner, cell.piece); }
+      render();
+    }
+
+    function showPromoteModal(fr, fc, tr, tc) {
+      const area = document.getElementById('modal-area');
+      area.innerHTML = `<div class="modal-wrap"><div class="promote-modal"><h3>成りますか？</h3><div class="btn-row"><button onclick="closeModal(true,${fr},${fc},${tr},${tc})">成る</button><button onclick="closeModal(false,${fr},${fc},${tr},${tc})">成らない</button></div></div></div>`;
+    }
+    window.closeModal = function (promote, fr, fc, tr, tc) {
+      document.getElementById('modal-area').innerHTML = '';
+      doMove(fr, fc, tr, tc, promote, false, null); render(); setTimeout(triggerAI, 300);
+    };
+
+    window.handPieceClick = function (piece, owner) {
+      if (gameOver || aiThinking) return;
+      const aiOwner = mode === 'pve' ? 1 : 0;
+      if (mode !== 'pvp' && turn === aiOwner) return;
+      if (owner !== turn) return;
+      if (selectedHandPiece === piece) { selectedHandPiece = null; movableCells = []; }
+      else { selected = null; selectedHandPiece = piece; movableCells = getDroppable(piece, owner); }
+      render();
+    };
+
+    window.resetGame = function () { initBoard(); render(); if (mode === 'evp') setTimeout(triggerAI, 400); };
+    window.undoMove = function () {
+      if (history.length === 0) return;
+      let steps = mode === 'pvp' ? 1 : 2;
+      while (steps-- > 0 && history.length > 0) { const s = history.pop(); board = s.board; myHand = s.myHand; enemyHand = s.enemyHand; turn = s.turn; lastMove = s.lastMove; }
+      selected = null; selectedHandPiece = null; movableCells = []; gameOver = false; aiThinking = false; render();
+    };
+    window.changeMode = function () { mode = document.getElementById('mode-select').value; initBoard(); render(); if (mode === 'evp') setTimeout(triggerAI, 400); };
+
+    function updateStatus() {
+      const s = document.getElementById('status');
+      if (gameOver) { const w = turn === 0 ? '後手' : '先手'; s.innerHTML = `<span>${w}の勝ち！</span> — おめでとうございます`; return; }
+      const t = turn === 0 ? '先手' : '後手';
+      const aiOwner = mode === 'pve' ? 1 : 0;
+      const isAiTurn = mode !== 'pvp' && turn === aiOwner;
+      if (isAiTurn || aiThinking) { s.innerHTML = `<span>AIが考え中...</span>`; }
+      else { s.innerHTML = `<span>${t}の番</span> — 駒をクリックして移動先を選んでください`; }
+    }
+
+    function render() {
+      updateStatus();
+      document.getElementById('undo-btn').disabled = aiThinking;
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let r = 0; r < 9; r++)for (let c = 0; c < 9; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
+        else if (lastMove && lastMove.tr === r && lastMove.tc === c) cell.classList.add('last-move');
+        if (movableCells.some(([mr, mc]) => mr === r && mc === c)) cell.classList.add('movable');
+        const p = board[r][c];
+        if (p) {
+          const el = document.createElement('div');
+          el.className = 'piece' + (p.owner === 1 ? ' enemy' : ' mine');
+          const isP = !PROMOTABLE.has(p.piece) && !['王', '玉', '金', '飛', '角', '銀', '桂', '香', '歩'].includes(p.piece);
+          if (isP) el.classList.add('promoted');
+          el.textContent = p.piece;
+          cell.appendChild(el);
+        }
+        cell.onclick = () => cellClick(r, c);
+        boardEl.appendChild(cell);
+      }
+      const renderHand = (hand, owner, elId) => {
+        const el = document.getElementById(elId); el.innerHTML = '';
+        const isE = owner === 1;
+        const aiOwner = mode === 'pve' ? 1 : 0;
+        const isAiHand = mode !== 'pvp' && owner === aiOwner;
+        for (const [piece, cnt] of Object.entries(hand)) {
+          if (cnt <= 0) continue;
+          const btn = document.createElement('div');
+          btn.className = 'hand-piece' + (isE ? ' enemy' : '');
+          if (selectedHandPiece === piece && owner === turn) btn.classList.add('selected');
+          btn.textContent = piece;
+          if (cnt > 1) { const b = document.createElement('span'); b.className = 'count'; b.textContent = cnt; btn.appendChild(b); }
+          if (!isAiHand) btn.onclick = () => handPieceClick(piece, owner);
+          el.appendChild(btn);
+        }
+      };
+      renderHand(myHand, 0, 'my-hand');
+      renderHand(enemyHand, 1, 'enemy-hand');
+      const cl = document.getElementById('col-labels');
+      if (!cl.children.length) { for (let c = 9; c >= 1; c--) { const s = document.createElement('span'); s.textContent = c; cl.appendChild(s); } }
+      const rl = document.getElementById('row-labels');
+      if (!rl.children.length) { const k = ['一', '二', '三', '四', '五', '六', '七', '八', '九']; for (let r = 0; r < 9; r++) { const s = document.createElement('span'); s.textContent = k[r]; rl.appendChild(s); } }
+    }
+
+    initBoard(); render();
+  </script>
+</body>
+
+</html>
