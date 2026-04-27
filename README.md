@@ -1,0 +1,2 @@
+# SimpleShogi
+シンプルな将棋
